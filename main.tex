@@ -1,4 +1,3 @@
-
 \documentclass{acm_proc_article-sp}
 
 \begin{document}
@@ -15,7 +14,7 @@
   \texttt{markus.witt@rwth-aachen.de}
 }
 
-\date{14.11.2014}
+\date{\today}
 
 \maketitle
 \begin{abstract}
@@ -74,6 +73,16 @@ Hence the common approach is to divide a single AS into multiple areas, within e
 
 \subsection{Open Shortest Paths First}
 
+In OSPF version 2, as given in \cite{RFC1247}, two or more routers are connected either through a direct link or network. The state of these adjecences are distributed via link state advertisements (LSA) gathered on every router of the AS whereby they are able to compile a weighted and directed graph of the complete AS which is used to build a tree containing every possible destination, the routing table. An AS may be furthermore divided into smaller areas with the special area 0 as the backbone connecting all other areas with the advantage of reduced traffic by summarisation at area borders.
+
+Every router has a unique ID consisting of a 32-bit number and at least one interface connecting it to another router. Interfaces may be connected directly to another router or through a network connecting multiple routers. There are two distinct types of routers if areas are not used: internal routers and AS boundary routers (ASBR). The latter exchange routing information with systems outside of the AS and feed the routes into the AS. The route to an ASBR is known by every other router. Two more types of routers exists, if areas are used in the AS: area border routers (ABR) and backbone routers (BR). ABR connect one or more areas to the backbone area 0 where BR have interfaces to the backbone area. Every ABR is a BR but not every BR is an ABR - it is then only connected to other BR. An ABR also runs the below described algorithm for each area it is connected to.
+
+A router periodically sends hello packets, which are OSPF packets of type one, on all interfaces to the broadcast address AllSPFRouters including among other things the HelloInterval, which are the number of seconds between the hello packets of the router, the unique ID and a list of neighbors from which hello packets have been received in the last RouterDeadInterval seconds. If the router also receives hello packets from neighbors which include its ID, they are able to communicate bidirectionally. If the interface is connected to a network and there are no designated router (DR) and backup designated router (BDR), a DR and BDR will be elected to reduce the overhead. The election takes place through the hello packets where the router with the highest ID becomes the DR. After a bidirectional connection is established, both neighbors send database description packets (DDP), which are type two OSPF packets, containing the content of their current link-state database in form of link-state advertisement headers. The receiver saves the advertisements which are more current than the ones in its local database and answeres with link state acknowledgement (LSA), OSPF type five, packets for each advertisement within RxmtInterval seconds or a retransmission occurs. The end of transmission is marked by a 0 in the M-Bit of the DDP. Afterwards the saved advertisements are requested through OSPF type three link state request (LSR) packets. These LSR packets are answered by link state update (LSU), OSPF type four, packets. LSU packets are also used if an update of a link status is to be flooded through the network.
+
+Each router sends link-status advertisement at least every 30 minutes (specified as LSRefreshTime). There are 5 different types of advertisements: router links advertisements (type 1), network links advertisements (type 2), summary link advertisements (type 3 and 4) and AS external link advertisements (type 5). Every router sends advertisements of type 1, which describe the state of all interfaces of a router in a specific area, into the specific area. Type 2 advertisements are send by the designated router into an area and contain all routers of the area. Type 3 and type 4 advertisements are send by ABR into an area and contain either the route to other networks of the AS (type 3) or the route to ASBR (type 4). Type 5 advertisements are flooded into the whole network by the ASBR and contain a route to an external AS, but they are also used to distribute a default route.
+
+These link-state advertisements are used to build a local link-state database for each area the router is participating in. Entries are added if a router receives LSU packets or if the router is configured to announce a specific network. They are replaced by updates and removed after one hour (MaxAge) if they are not refreshed or updated. The local link-state database is then used to build a tree with the router as the root and the different routes with lowest costs as its paths.
+
 \section{Exterior Gataway Protocol}
 
 In the previous section, we have seen how routing works in a single autonomous system (AS). Its owner, usually an Internet service provider (ISP), may decide which IGP to employ within its boundaries. On the next hierarchical level, the EGP must provide interconnectivity between the multiple AS of the network regarding their own routing policies as described in \cite{tanenbaum}. The customer ISPs only transfer packets whose source or destination reside in the AS. All the traffic in between is carried out by transit ISPs charging their clients for the service. Peering agreements between ISPs are also common. In that case, two client ISPs advertise their address spaces to each other to enable direct routing between their ASes (and avoid paying the ISPs). The EGP should also manage a routing table including a vast amount of destinations, which is being kept in scope by using CIDRized IP adresses of the form a.b.c.d/x with x indicating the number of bits defined in the first part. Following this technique, it is possible to summarize overlapping prefixes in a single entry of the routing table, while applying longest prefix match as a rule to make sure the route being chosen is the most specific (and appropriate) one to the destination.
@@ -120,6 +129,8 @@ OSPF and BGP build the core of the routing algorithms employed in the Internet, 
   \bibitem{perkins}  Charles E. Perkins, Elizabeth M. Royer {\em Ad-hoc On-Demand Distance Vector Routing} Proceedings of the 2nd IEEE workshop on mobile computing systems and applications, 1997.
   
   \bibitem{holter} Kenneth Holter {\em Comparing AODV and OLSR} 2005. 
+
+  \bibitem{RFC1247} J. Moy {\em RFC 1247: OSPF Version 2} 1991.
   
   \end{thebibliography}
 
