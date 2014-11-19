@@ -81,22 +81,29 @@ Every router has a unique ID consisting of a 32-bit number and at least one inte
 
 A router periodically sends hello packets, which are OSPF packets of type one, on all interfaces to the broadcast address AllSPFRouters including among other data the HelloInterval, which are the number of seconds between the hello packets of the router, the unique ID and a list of neighbors from which hello packets have been received in the last RouterDeadInterval seconds. If the router also receives hello packets from neighbors which include its ID, they are able to communicate bidirectionally. If the interface is connected to a network and there are no designated router (DR) and backup designated router (BDR), a DR and BDR will be elected to reduce the overhead by reducing the adjacences in a network. After a bidirectional connection is established, both neighbors send database description packets (DDP), which are type two OSPF packets, containing the content of their current link-state database in form of link-state advertisement headers. The receiver saves the advertisements which are more current than the ones in its local database or entirely missing and answeres with link state acknowledgement (LSA), OSPF type five, packets for each advertisement within RxmtInterval seconds or a retransmission occurs. The end of transmission is marked by a 0 in the M-Bit of the DDP. Afterwards the saved advertisements are requested through OSPF type three link state request (LSR) packets. These LSR packets are answered by link state update (LSU), OSPF type four, packets. LSU packets are also used if an update of a link status is to be flooded through the network.
 
+\begin{figure}
+\centering
 \begin{bytefield}{32}
 \bitheader{0,8,16,24,32} \\
-\bitbox{8}{Version} & \bitbox{8}{Type} & \bitbox{16}{Packet lenght} \\
+\bitbox{8}{Version} & \bitbox{8}{Type} & \bitbox{16}{Packet length} \\
 \wordbox{1}{Router ID} \\
 \wordbox{1}{Area ID} \\
 \bitbox{16}{Checksum} & \bitbox{16}{Autype} \\
 \wordbox{2}{Authentication} \\
-\caption{The header of an OSPF packet as specified in \cite{RFC1247}}
-\label{fig:ospfheader}
 \end{bytefield}
+\caption{The header of an OSPF packet as specified in RFC1247}
+\label{fig:ospfheader}
+\end{figure}
 
 OSPF packets consist of a shared 24-byte header as seen in \ref{fig:ospfheader}. The version number is always 2, the type is one of the already mentioned OSPF packet types. The checksum is calculated equal to other IP packets except that the 64-bit authentication field is left out. The AuType field identifies the used authentication scheme and is either zero for no authentication or one for a shared key.
 
-Each router sends link-status advertisement at least every 30 minutes (specified as LSRefreshTime). There are 5 different types of advertisements: router links advertisements (type 1), network links advertisements (type 2), summary link advertisements (type 3 and 4) and AS external link advertisements (type 5). Every router sends advertisements of type 1, which describe the state of all interfaces of a router in a specific area, into the specific area. Type 2 advertisements are send by the designated router into an area and contain all routers of the area. Type 3 and type 4 advertisements are send by ABR into an area and contain either the route to other networks of the AS (type 3) or the route to ASBR (type 4). Type 5 advertisements are flooded into the whole network by the ASBR and contain a route to an external AS, but they are also used to distribute a default route.
+Each router sends a link-state advertisement for each interface at least every 30 minutes (specified as LSRefreshTime). There are 5 different types of advertisements: router links advertisements (type 1), network links advertisements (type 2), summary link advertisements (type 3 and 4) and AS external link advertisements (type 5). Every router sends advertisements of type 1, which describe the state of all interfaces of a router in a specific area, into the specific area. Type 2 advertisements are send by the designated router into an area and contain all routers of the area. Type 3 and type 4 advertisements are send by ABR into an area and contain either the route to other networks of the AS (type 3) or the route to ASBR (type 4). Type 5 advertisements are flooded into the whole network by the ASBR and contain a route to an external AS, but they are also used to distribute a default route.
 
 These link-state advertisements are used to build a local link-state database for each area the router is participating in. Entries are added if a router receives LSU packets or if the router is configured to announce a specific network. They are replaced by updates and removed after one hour (MaxAge) if they are not refreshed or updated. The local link-state database is then used to build a tree with the router as the root and the different routes with lowest costs as its paths.
+
+Changes propagate in the AS through LSU packets. If the interface of a router changes its state, the router sends a new link-state advertisement in a LSU packet to all of its adjacent neighbors. The neighbor checks if the received link-state is newer than the one in its local database and updates the database if required, which triggers the repetition of the received link-state advertisement to all of its neighbors. This procedure is called flooding and is used to broadcast changes into the whole AS.
+
+OSPF version 2 was changed between 1991 through the publication of \cite{RFC1538}, \cite{RFC2178} and \cite{RFC2328}.
 
 \section{Exterior Gataway Protocol}
 
@@ -146,6 +153,12 @@ OSPF and BGP build the core of the routing algorithms employed in the Internet, 
   \bibitem{holter} Kenneth Holter {\em Comparing AODV and OLSR} 2005. 
 
   \bibitem{RFC1247} J. Moy {\em RFC 1247: OSPF Version 2} 1991.
+  
+  \bibitem{RFC1583} J. Moy {\em RFC 1583: OSPF Version 2} 1994.
+  
+  \bibitem{RFC2178} J. Moy {\em RFC 2178: OSPF Version 2} 1997.
+  
+  \bibitem{RFC2328} J. Moy {\em RFC 2328: OSPF Version 2} 1998.
   
   \end{thebibliography}
 
