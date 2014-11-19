@@ -101,9 +101,11 @@ Each router sends a link-state advertisement for each interface at least every 3
 
 These link-state advertisements are used to build a local link-state database for each area the router is participating in. Entries are added if a router receives LSU packets or if the router is configured to announce a specific network. They are replaced by updates and removed after one hour (MaxAge) if they are not refreshed or updated. The local link-state database is then used to build a tree with the router as the root and the different routes with lowest costs as its paths.
 
-Changes propagate in the AS through LSU packets. If the interface of a router changes its state, the router sends a new link-state advertisement in a LSU packet to all of its adjacent neighbors. The neighbor checks if the received link-state is newer than the one in its local database and updates the database if required, which triggers the repetition of the received link-state advertisement to all of its neighbors. This procedure is called flooding and is used to broadcast changes into the whole AS.
+Changes propagate in the AS through LSU packets. If the interface of a router changes its state, the router sends a new link-state advertisement in a LSU packet to all of its adjacent neighbors. The neighbor checks if the received link-state is newer than the one in its local database and updates the database if required, which triggers the repetition of the received link-state advertisement to all of its neighbors. If the received link-state is older than the local one it is ignored. This procedure is called flooding and is used to broadcast changes into the whole AS.
 
-OSPF version 2 was changed between 1991 through the publication of \cite{RFC1538}, \cite{RFC2178} and \cite{RFC2328}.
+OSPF version 2 was changed between 1991 through the publication of \cite{RFC1538}, \cite{RFC2178} and \cite{RFC2328}. RFC1583 resolves a problem regarding virtual links, which are used to connect two non-continuous parts of the same area, which could cause routing loops. RFC2178 enhances the autentication through adding a cryptographic authentication type while specifying the use with MD5 and changes the flooding algorithm. If a router receives a LSU with an advertisements that is less recent than the one in its local database, it responds by flooding back the local copy. Furthermore a detection of maximum transmission unit (MTU) missmatches was implemented using a new field in the DDP. If a router receives a DDP with a MTU larger than the MTU of the interface, it drops the packet and does not form an adcacency preventing further packet loss. RFC2328 enhances the routing table lookup to prefer the most specific path.
+
+OSPF version 3 as specified in \cite{RFC5340} changes OSPF to be compatible with IPv6. Whereas OSPFv2 has only a very few changes in the exchanged packets between RFC1247 and RFC2328, RFC5340 has significant changes to accomodate for the significant larger IPv6 addresses.
 
 \section{Exterior Gataway Protocol}
 
@@ -159,6 +161,8 @@ OSPF and BGP build the core of the routing algorithms employed in the Internet, 
   \bibitem{RFC2178} J. Moy {\em RFC 2178: OSPF Version 2} 1997.
   
   \bibitem{RFC2328} J. Moy {\em RFC 2328: OSPF Version 2} 1998.
+  
+  \bibitem{RFC5340} R. Coltun, D. Ferguson, A. Lindem Ed., J. Moy {\em RFC 5340: OSPF for IPv6} 2008
   
   \end{thebibliography}
 
