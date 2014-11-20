@@ -1,9 +1,12 @@
 \documentclass{acm_proc_article-sp}
 
-\usepackage{bytefield}
+\usepackage[bitwidth=0.75em]{bytefield}
 \usepackage{tikz}
 \usetikzlibrary{arrows}
 
+\makeatletter
+\let\@copyrightspace\relax
+\makeatother
 
 \begin{document}
 
@@ -98,7 +101,7 @@ A router periodically sends hello packets, which are OSPF packets of type one, o
 \label{fig:ospfheader}
 \end{figure}
 
-OSPF packets consist of a shared 24-byte header as seen in \ref{fig:ospfheader}. The version number is always 2, the type is one of the already mentioned OSPF packet types. The checksum is calculated equally to other IP packets except that the 64-bit authentication field is left out. The AuType field identifies the used authentication scheme and is either zero for no authentication or one for a shared key.
+OSPF packets consist of a shared 24-byte header as seen in figure \ref{fig:ospfheader}. The version number is always 2, the type is one of the already mentioned OSPF packet types. The checksum is calculated equally to other IP packets except that the 64-bit authentication field is left out. The AuType field identifies the used authentication scheme and is either zero for no authentication or one for a shared key.
 
 Each router sends a link-state advertisement for each interface at least every 30 minutes (specified as LSRefreshTime). There are five different types of advertisements: router link advertisements (type 1), network link advertisements (type 2), summary link advertisements (type 3 and 4) and AS external link advertisements (type 5). Every router sends advertisements of type 1, which describe the state of all interfaces of a router in a specific area, into the specific area. Type 2 advertisements are sent by the designated router into an area and contain all routers of the area. Type 3 and type 4 advertisements are sent by ABR into an area and contain either the route to other networks of the AS (type 3) or the route to ASBR (type 4). Type 5 advertisements are flooded into the whole network by the ASBR and contain a route to an external AS, but they are also used to distribute a default route.
 
@@ -120,7 +123,7 @@ The enormous size of the Internet could only be managed by a distance-vector EGP
 
 \subsection{Border Gateway Protocol}
 
-The Border Gateway Protocol as specified in \cite{RFC4271} can be used either as an IGP inside an AS or as an EGP between different AS, but we will study it as an EGP. BGP exchanges network layer reachability information (NLRI) between two peers by TCP and a protocol tracking finite state machine at each peer to allow for destination based forwarding. The received NLRI are filtered, saved to a local routing information base (RIB) which is later used to build the routing table and finally distributed to other peers. 
+The Border Gateway Protocol as specified in \cite{RFC4271} can be used either as an IGP inside an AS or as an EGP between different AS. We will only study the EGP aspect. BGP exchanges network layer reachability information (NLRI) between two peers via TCP and a protocol tracking finite state machine at each peer to allow for destination based forwarding. The received NLRI is filtered, saved to a local routing information base (RIB) and finally distributed to other peers. The RIB is used to build the routing table in a later stage.
 
 % BGP Header
 \begin{figure}
@@ -134,7 +137,7 @@ The Border Gateway Protocol as specified in \cite{RFC4271} can be used either as
 \label{fig:bgpheader}
 \end{figure}
 
-TCP on port 179 is used to reduce the complexity and overhead of the protocoll by using it as a reliable way to transmit the BGP datagrams. The header as seen in \ref{fig:bgpheader} consists of a 16 bytes marker in which every bit is always set, a two byte lenght field and an one byte long type field which specifies the type of the BGP message. The resulting BGP packet is between 19 and 4096 bytes long and there are four different types of messages specified: OPEN, UPDATE, NOTIFICATION and KEEPALIVE. These messages are exchanged between the peers during and after the establishment of their connection.
+TCP on port 179 is used to reduce the complexity and overhead of the protocoll by using it as a reliable way to transmit the BGP datagrams. The header as seen in figure \ref{fig:bgpheader} consists of a 16 bytes marker in which every bit is always set, a two byte lenght field and an one byte long type field which specifies the type of the BGP message. The resulting BGP packet is between 19 and 4096 bytes long and there are four different types of messages specified: OPEN, UPDATE, NOTIFICATION and KEEPALIVE. These messages are exchanged between the peers during and after the establishment of their connection.
 
 % The finite state machine of BGP. 
 \begin{figure}
@@ -156,7 +159,7 @@ TCP on port 179 is used to reduce the complexity and overhead of the protocoll b
 
 % von oben nach unten
 
-    (I) edge [loop above] node {other} (I)
+    (I) edge [loop above] node {} (I)
         edge [bend left=20] node[right=1mm] {1} (C)
         
     (C) edge [loop right] node {9} (C)
@@ -173,23 +176,50 @@ TCP on port 179 is used to reduce the complexity and overhead of the protocoll b
     (E) edge [loop below] node {11, 26, 27} (E)
         
 % von unten nach oben
-    (E) edge [bend left=70]   node[right=1mm] {other} (I)
-    (OC) edge [bend right=40] node[left=1mm] {other} (I)
-    (OS) edge [bend left=60] node[right=1mm] {other} (I)
+    (E) edge [bend left=50]   node[right=1mm] {} (I)
+    (OC) edge [bend left=50] node[right=1mm] {} (I)
+    (OS) edge [bend left=50] node[left=1mm] {} (I)
          edge [bend left=20]  node[left=1mm] {18} (A)
     (A) edge [bend left=20]   node[left=1mm] {9} (C)
-        edge [bend left=50]   node[left=1mm] {other} (I)
-    (C) edge [bend left=20]   node[left=1mm] {other} (I);
+        edge [bend left=50]   node[left=1mm] {} (I)
+    (C) edge [bend left=20]   node[left=1mm] {} (I);
 \end{tikzpicture}
 \caption{The FSM of a BGP connection}
+{All non-specified events follow the unmarked transition}
 \label{fig:bgpfsm}
 \end{figure}
 
-Every BGP session consists of eight mandatory attributes including the current state of the finite state machine, a ConnectRetryCounter and -Time, a HoldTime, a KeepaliveTime and associated timer. Furthermore there are 16 mandatory state machine events from which at least four are used for a successfull setup of the peering. The FSM as seen in \ref{fig:bgpfsm} starts in the idle state, where no ressources are allocated and incoming connections are refused. On a ManualStart (1) event the system initialises the used ressources which are the ConnectRetryCounter and the ConnectRetryTimer. Then the system listens for incoming connections and initiates one to the peer system and is then in the connect state. If the ConnectRetryTimer expires, the system stays in this state and tries to reconnect to the peer system. Else if there is a TCP\_CR\_Acked (16) or TCPConnectionConfirmed (17) event, the ConnectRetryTimer stops and the BGP session setup progresses through sending an OPEN message containing amongst other data the version number 4, the number of the AS and a BGP identifier which must be an IP address assigned to the host. The state changes to OpenSend where the host waits for an OPEN message of its peer (Event 19: BGPOpen) which is answered by a KEEPALIVE message which does not have data except for the header. After setting the KeepaliveTimer and HoldTimer the state changes to OpenConfirm, where the host waits for the KEEPALIVE message of its peer (Event 26: KeepAliveMsg) which changes the state to Established upon reception.
+\begin{table}
+\centering
+    \begin{tabular}{r l}
+    \# & Name of the FSM event    \\
+    \hline                        \\
+    1  & ManualStart              \\
+    2  & ManualStop               \\
+    9  & ConnectRetryTimerExpires \\
+    10 & HoldTimerExpires         \\
+    11 & KeepaliveTimerExpires    \\
+    16 & Tcp\_CR\_Acked           \\
+    17 & TcpConnectionConfirmed   \\
+    18 & TcpConnectionFails       \\
+    19 & BGPOpen                  \\
+    21 & BGPHeaderError           \\
+    22 & BGPOpenMsgErr            \\
+    24 & NotifMsgVerErr           \\
+    25 & MotifMsg                 \\
+    26 & KeepAliveMsg             \\
+    27 & UpdateMsg                \\
+    28 & UpdateMsgErr             \\
+    \end{tabular}
+\caption{The mandatory events in a BGP FSM}
+\label{tab:bgpfsmevent}
+\end{table}
 
-The events ManualStop(2), ConnectRetryTimerExpires(9), HoldTimerExpires(10), KeepaliveTimerExpires(11), TcpConnectionFails(18), BGPHeaderError(21), BGPOpenMsgError(22), NotifMsgVerErr(24), NotifMsg(25), UpdateMsgErr(28) lead to the teardown of the current connection attempt through dropping of the TCP connection and resetting of used timers and ressources before the state changes to Idle again.
+Every BGP session consists of eight mandatory attributes including the current state of the finite state machine, a ConnectRetryCounter and -Time, a HoldTime, a KeepaliveTime and associated timer. Furthermore there are 16 mandatory state machine events from which at least four are used for a successfull setup of the peering. The FSM as seen in figure \ref{fig:bgpfsm} starts in the Idle state, where no ressources are allocated and incoming connections are refused. On a ManualStart event the system initialises the used ressources which are the ConnectRetryCounter and the ConnectRetryTimer. Then the system listens for incoming connections and initiates one to the peer system and is then in the Connect state. If the ConnectRetryTimer expires, the system stays in this state and tries to reconnect to the peer system. Else if there is a TCP\_CR\_Acked or TCPConnectionConfirmed event, the ConnectRetryTimer stops and the BGP session setup progresses through sending an OPEN message containing amongst other data the version number 4, the number of the AS and a BGP identifier which must be an IP address assigned to the host. The state changes to OpenSend where the host waits for an OPEN message of its peer (Event BGPOpen) which is answered by a KEEPALIVE message which does not have data except for the header. After setting the KeepaliveTimer and HoldTimer the state changes to OpenConfirm, where the host waits for the KEEPALIVE message of its peer (Event KeepAliveMsg) which changes the state to Established upon reception.
 
-The Established state is the only state where UpdateMsg (27) events indicating the reception of an UPDATE message are permitted. An UPDATE message consists of the BGP packet header followed by the withdrawn routes, path attributes and NLRI for these path attributes. Withdrawn routes should be deleted from the local RIB (loc-RIB) at once. There are different types of path attributes which are mandatory and well-known, well-known and optional. Attributes which are mandatory must be included in UPDATE packets, well-known attributes must be understand by a implementation of BGP. There are three mandatory attributes: ORIGIN (Type 1) which specifies the origin of the path information, AS\_PATH (Type 2) which contains a set of every AS till the ORIGIN and NEXT\_HOP (Type 3) which specifies the unicast IP address of the next hop to reach the destination.
+The other events as seen in table \ref{tab:bgpfsmevent} lead to the teardown of the current connection attempt through dropping of the TCP connection and resetting of used timers and ressources before the state changes to Idle again.
+
+The Established state is the only state where UpdateMsg events indicating the reception of an UPDATE message are permitted. An UPDATE message consists of the BGP packet header followed by the withdrawn routes, path attributes and NLRI for these path attributes. Withdrawn routes should be deleted from the local RIB (loc-RIB) at once. There are different types of path attributes which are mandatory and well-known, well-known and optional. Attributes which are mandatory must be included in UPDATE packets, well-known attributes must be understand by a implementation of BGP. There are three mandatory attributes: ORIGIN (Type 1) which specifies the origin of the path information, AS\_PATH (Type 2) which contains a set of every AS till the ORIGIN and NEXT\_HOP (Type 3) which specifies the unicast IP address of the next hop to reach the destination.
 
 Two additional buffer for each peer - adjacent RIB input and output (Adj-RIB-In and Adj-RIB-Out) - contain the information from incoming and for outgoing NRLI. If entries in Adj-RIB-In are added or renewed, the decision process consisting of three phases. Phase one calculates the degree of preference and if the NRLI is used at all. The exact calculation is based on local rules which can be configured for each pair. Phase two is started by the end of phase one and determines which route gets into the loc-RIB. The route is discarded if the NEXT\_HOP is not reachable or if the AS\_PATH contains loops. If there is more than one route for a given destination, phase two chooses the one with the highest degree of preference. Phase three is triggered by the end of phase two or if the loc-RIB changes or if a new BGP connection enters the Established-state. It adds routes to the Adj-RIB-Out and applies filters to this process so that new routes may be not announced to peers.
 
@@ -240,7 +270,9 @@ OSPF and BGP build the core of the routing algorithms employed in the Internet, 
   
   \bibitem{RFC2328} J. Moy {\em RFC 2328: OSPF Version 2} 1998.
   
-  \bibitem{RFC5340} R. Coltun, D. Ferguson, A. Lindem Ed., J. Moy {\em RFC 5340: OSPF for IPv6} 2008
+  \bibitem{RFC5340} R. Coltun, D. Ferguson, A. Lindem Ed., J. Moy {\em RFC 5340: OSPF for IPv6} 2008.
+  
+  \bibitem{RFC4271} Y. Rekhter, T. Li, S. Hares {\em RFC 4271: A Border Gateway Protocol 4 (BGP-4)} 2006.
   
   \end{thebibliography}
 
